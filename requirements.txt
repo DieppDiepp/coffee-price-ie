@@ -1,0 +1,5 @@
+beautifulsoup4>=4.13,<5
+crawl4ai>=0.8,<0.9
+python-dateutil>=2.9,<3
+pytest>=8.2,<9
+scrapling>=0.2.99,<0.3
