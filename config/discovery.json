@@ -1,0 +1,54 @@
+{
+  "_comment": "Config cho pipeline/01_discovery — đọc bởi pipeline/01_discovery/main.py",
+
+  "date_range": {
+    "start": "2026-03-01",
+    "end":   "2026-03-11"
+  },
+
+  "tavily": {
+    "max_results":    10,
+    "search_depth":   "advanced",
+    "exclude_domains": [
+      "youtube.com",
+      "facebook.com",
+      "tiktok.com",
+      "zalo.me",
+      "shopee.vn",
+      "lazada.vn",
+      "tiki.vn"
+    ]
+  },
+
+  "query_templates": [
+    {
+      "id":       "daily_price",
+      "template": "giá cà phê ngày {day} tháng {month} năm {year}",
+      "priority": 1
+    }
+  ],
+
+  "output": {
+    "dir":              "data/01_discovered",
+    "filename_pattern": "{year}-{month:02d}.jsonl",
+    "_comment": "Gom theo tháng — data/01_discovered/2024-03.jsonl",
+    "format":           "jsonl",
+    "_comment_jsonl":   "Mỗi dòng = 1 ngày, append vào cuối file khi chạy"
+  },
+
+  "resume": {
+    "skip_if_date_exists": true,
+    "_comment": "Kiểm tra field 'date' trong từng dòng JSONL trước khi query"
+  },
+
+  "storage": {
+    "raw_html": "database",
+    "_comment": "HTML gốc lưu vào SQLite local, không lưu filesystem — tránh nặng git"
+  },
+
+  "rate_limit": {
+    "delay_between_calls_sec": 3,
+    "rotate_keys_every_n_calls": 900
+  }
+
+}
