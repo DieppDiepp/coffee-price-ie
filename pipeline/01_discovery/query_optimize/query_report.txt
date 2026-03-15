@@ -1,0 +1,67 @@
+KET QUA PHAN TICH TAN SUAT TU KHOA (EDA QUERY)
+==================================================
+
+1. Top cum 3 tu (Tri-grams) xuat hien nhieu nhat tren tieu de/snippet:
+   - 'giá cà phê': 389 lan
+   - 'cà phê hôm': 97 lan
+   - 'phê hôm nay': 97 lan
+   - 'cà phê trực': 64 lan
+   - 'phê trực tuyến': 64 lan
+   - 'cà phê arabica': 58 lan
+   - 'cà phê robusta': 43 lan
+   - 'cà phê thế': 40 lan
+   - 'phê thế giới': 40 lan
+   - 'trực tuyến hôm': 32 lan
+   - 'tuyến hôm nay': 32 lan
+   - 'london new york': 32 lan
+   - 'sàn london new': 31 lan
+   - 'trực tuyến sàn': 29 lan
+   - 'new york bmf': 29 lan
+
+2. Top cum 4 tu (4-grams) xuat hien nhieu nhat tren tieu de/snippet:
+   - 'giá cà phê hôm': 97 lan
+   - 'cà phê hôm nay': 97 lan
+   - 'giá cà phê trực': 64 lan
+   - 'cà phê trực tuyến': 64 lan
+   - 'cà phê thế giới': 40 lan
+   - 'giá cà phê thế': 37 lan
+   - 'giá cà phê arabica': 37 lan
+   - 'trực tuyến hôm nay': 32 lan
+   - 'phê trực tuyến sàn': 29 lan
+   - 'new york bmf brazil': 29 lan
+   - 'giá cà phê robusta': 27 lan
+   - 'trung bình ở mức': 26 lan
+   - 'thị trường cà phê': 25 lan
+   - 'sàn london new york': 24 lan
+   - 'phê thế giới trực': 23 lan
+
+3. Danh sach goi y tu Google Autocomplete:
+   - giá cà phê arabica cầu đất
+   - giá cà phê arabica việt nam hôm nay
+   - giá cà phê robusta london
+   - giá cà phê hiện tại
+   - giá cà phê robusta hôm nay
+   - giá cà phê robusta
+   - giá cà phê arabica sơn la
+   - giá cà phê arabica hôm nay
+   - giá cà phê robusta luân đôn
+   - giá cà phê robusta thế giới
+   - giá cà phê arabica việt nam
+   - giá cà phê hôm nay
+   - giá cà phê đắk lắk
+   - giá cà phê tươi hôm nay
+   - giá cà phê robusta và arabica
+   - giá cà phê arabica trên sàn new york
+   - giá cà phê nhân hôm nay
+   - giá cà phê robusta hiện tại
+   - giá cà phê arabica hiện nay
+   - giá cà phê hôm
+   - giá cà phê lâm đồng
+   - giá cà phê trung nguyên 500g
+   - giá cà phê robusta london hôm nay
+   - giá cà phê arabica
+   - giá cà phê robusta trực tuyến
+   - giá cà phê robusta sàn luân đôn
+   - giá cà phê arabica new york
+   - giá cà phê arabica và robusta
+   - giá cà phê thế giới
