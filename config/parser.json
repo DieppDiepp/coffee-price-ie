@@ -1,0 +1,9 @@
+{
+    "input_glob": "data/02_raw_articles/*.jsonl",
+    "output_dir": "data/03_articles",
+    "signals": {
+        "coffee": ["cà phê", "robusta", "tây nguyên", "đắk lắk", "đắk nông", "gia lai", "lâm đồng", "dak lak", "dak nong"],
+        "price": ["đ/kg", "đồng/kg", "usd/tấn", "us cent/pound", "tăng", "giảm", "dao động", "neo ở mức", "triệu đồng/tấn"],
+        "hard_negative": ["hồ tiêu", "cao su", "vàng", "xăng", "dầu", "gạo", "heo hơi", "chứng khoán"]
+    }
+}

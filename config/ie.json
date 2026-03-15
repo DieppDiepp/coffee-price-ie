@@ -1,0 +1,29 @@
+{
+    "input_glob": "data/03_articles/*.jsonl",
+    "output_dir": "data/04_price_mentions",
+    "prompt_version": "v1.0",
+    "models": {
+        "qwen": "Qwen/Qwen2.5-7B-Instruct",
+        "llama": "meta-llama/Llama-3.1-8B-Instruct"
+    },
+    "system_prompt": "Bạn là chuyên gia khai phá dữ liệu nông sản. Trích xuất thông tin giá cà phê Robusta từ câu sau và xuất ra ĐÚNG định dạng JSON. KHÔNG giải thích. Nếu không có thông tin hợp lệ, trả về mảng rỗng [].",
+    "extraction_schema": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "commodity": {"type": "string"},
+                "price_low": {"type": "number"},
+                "price_high": {"type": "number"},
+                "currency": {"type": "string"},
+                "unit": {"type": "string"},
+                "price_direction": {"type": "string"},
+                "price_change": {"type": "number"},
+                "location": {"type": "string"},
+                "price_type": {"type": "string"},
+                "evidence_span": {"type": "string"}
+            },
+            "required": ["commodity", "price_low", "price_high", "currency", "unit", "location"]
+        }
+    }
+}
