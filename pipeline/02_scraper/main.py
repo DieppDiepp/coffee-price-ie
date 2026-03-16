@@ -5,7 +5,12 @@ from datetime import datetime
 from time import sleep
 from urllib.parse import urlparse
 
-from extractors import fetch_requests, fetch_browser, is_html_empty
+from extractors import (
+    fetch_requests,
+    fetch_browser,
+    is_html_empty,
+    is_cloudflare_page
+)
 
 INPUT_FILE = "data/01_discovered/2026-03.jsonl"
 OUTPUT_ROOT = "data/02_rawhtml"
@@ -18,7 +23,9 @@ BAD_DOMAINS = [
 
 
 def save_metadata(filepath, metadata):
+
     with open(filepath, "w", encoding="utf-8") as f:
+
         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
 
@@ -44,7 +51,7 @@ def main():
                 url = r["url"]
                 rank = r["rank"]
 
-                # check duplicate
+                # skip duplicate
                 if url in seen_urls:
                     print("duplicate link:", url)
                     continue
@@ -57,7 +64,6 @@ def main():
                     print("skip social:", url)
                     continue
 
-                # hash filename để tránh trùng
                 url_hash = hashlib.md5(url.encode()).hexdigest()
 
                 html_path = day_dir / f"{url_hash}.html"
@@ -70,11 +76,25 @@ def main():
                 print("crawl:", url)
 
                 crawl_method = "requests"
+
                 html, status = fetch_requests(url)
 
+                # detect cloudflare
+                if is_cloudflare_page(html):
+
+                    print("cloudflare detected, waiting...")
+
+                    sleep(10)
+
+                    html, status = fetch_requests(url)
+
+                # fallback browser
                 if is_html_empty(html):
+
                     print("retry with browser...")
+
                     html = fetch_browser(url)
+
                     crawl_method = "browser"
 
                 if html:

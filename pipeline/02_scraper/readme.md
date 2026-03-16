@@ -6,8 +6,8 @@ Mục tiêu của **Bước 2** trong pipeline là thu thập và lưu trữ **r
 
 Việc lưu raw HTML giúp:
 
-* Giữ lại **toàn bộ nội dung gốc của trang web**
-* Phục vụ cho các bước xử lý sau như:
+* Lưu lại **toàn bộ nội dung gốc của trang web**
+* Phục vụ cho các bước xử lý tiếp theo như:
 
   * parsing nội dung bài báo
   * trích xuất thông tin (information extraction)
@@ -21,11 +21,11 @@ Raw HTML được lưu **nguyên bản**, không chỉnh sửa.
 
 Dữ liệu đầu vào của bước này là kết quả từ bước discovery:
 
-```text
+```
 data/01_discovered/2026-03.jsonl
 ```
 
-File `.jsonl` chứa kết quả tìm kiếm theo nhiều query khác nhau.
+File `.jsonl` chứa kết quả tìm kiếm từ nhiều query khác nhau.
 
 Ví dụ một record:
 
@@ -43,7 +43,7 @@ Ví dụ một record:
 }
 ```
 
-Mỗi record chứa danh sách các URL bài báo.
+Mỗi record chứa danh sách các URL bài báo được tìm thấy.
 
 ---
 
@@ -51,14 +51,14 @@ Mỗi record chứa danh sách các URL bài báo.
 
 Crawler thực hiện các bước sau:
 
-### 1. Đọc dữ liệu discovery
+## 1. Đọc dữ liệu discovery
 
 * Đọc file `.jsonl`
 * Trích xuất tất cả URL từ trường `results`.
 
 ---
 
-### 2. Loại bỏ URL trùng lặp
+## 2. Loại bỏ URL trùng lặp
 
 Một bài báo có thể xuất hiện trong **nhiều query khác nhau**, vì vậy cần loại bỏ trùng lặp trước khi crawl.
 
@@ -70,52 +70,81 @@ query 2 → bài báo A
 query 3 → bài báo A
 ```
 
-Crawler chỉ tải **1 lần**.
+Crawler chỉ tải **một lần duy nhất** cho mỗi URL.
+
 
 ---
 
-### 3. Tải HTML của trang web
+## 3. Tải HTML của trang web
 
-Crawler gửi HTTP request đến từng URL.
+Crawler sử dụng hai phương pháp:
 
-Trong trường hợp:
+### Requests
+
+Phương pháp mặc định là gửi HTTP request trực tiếp bằng thư viện `requests`.
+
+### Browser rendering
+
+Trong các trường hợp:
 
 * HTML quá ngắn
-* request thất bại
+* trang yêu cầu JavaScript
+* trang bị chặn bởi Cloudflare
 
-crawler sẽ **retry bằng browser** để render trang.
-
----
-
-### 4. Lưu raw HTML
-
-HTML của mỗi trang được lưu **nguyên bản**.
+crawler sẽ **fallback sang browser (Playwright)** để render trang trước khi lấy HTML.
 
 ---
 
-### 5. Lưu metadata
+## 4. Phát hiện Cloudflare
 
-Mỗi file HTML đi kèm một file metadata chứa thông tin:
+Một số trang báo sử dụng hệ thống bảo vệ của Cloudflare, có thể trả về trang trung gian với nội dung như:
 
-* URL gốc
-* domain
-* thời gian crawl
+```
+Just a moment...
+Checking your browser before accessing
+```
 
-Ví dụ metadata:
+Crawler sẽ:
+
+* phát hiện trang Cloudflare
+* chờ một khoảng thời gian
+* thử tải lại trang
+
+Điều này giúp tăng tỷ lệ crawl thành công.
+
+---
+
+## 5. Lưu raw HTML
+
+HTML của mỗi trang được lưu **nguyên bản** dưới dạng file `.html`.
+
+Tên file được tạo bằng **hash của URL** để tránh trùng lặp và lỗi ký tự.
+
+Ví dụ:
+
+```
+a1b2c3.html
+```
+
+---
+
+## 6. Lưu metadata
+
+Mỗi file HTML đi kèm một file metadata chứa thông tin crawl.
+
+Ví dụ:
 
 ```json
 {
   "url": "https://example.com/article",
   "domain": "example.com",
-  "crawl_time": "2026-03-15T16:00:00"
+  "date": "2026-03-01",
+  "rank": 1,
+  "crawl_time": "2026-03-15T16:00:00",
+  "crawl_method": "requests",
+  "html_size": 45231
 }
 ```
-
----
-
-### 6. Tổ chức dữ liệu theo ngày
-
-Các file được lưu theo cấu trúc thư mục theo ngày.
 
 ---
 
@@ -142,11 +171,11 @@ data
     └── 2026-03-03
 ```
 
-Mỗi bài báo tạo ra:
+Mỗi bài báo sẽ tạo ra:
 
 ```
-<hash>.html  → raw HTML
-<hash>.json  → metadata
+<hash>.html   → raw HTML
+<hash>.json   → metadata
 ```
 
 ---
@@ -155,7 +184,7 @@ Mỗi bài báo tạo ra:
 
 Sau khi chạy crawler trên dataset discovery:
 
-### Thống kê discovery
+## Thống kê discovery
 
 ```
 Total URLs: 430
@@ -166,85 +195,84 @@ Number of duplicated URLs: 97
 
 Nguyên nhân:
 
-Các query tìm kiếm khác nhau có thể trả về **cùng một bài báo**, dẫn đến nhiều URL trùng.
+Các query tìm kiếm khác nhau có thể trả về **cùng một bài báo**, dẫn đến nhiều URL trùng lặp.
 
 ---
 
-### Kết quả crawl
+# Kết quả crawl
 
 ```
 Unique URLs: 148
-HTML files downloaded: 129
-Missing pages: 19
+HTML files: 143
+Missing pages: 5
 ```
 
 Tỷ lệ crawl thành công:
 
 ```
-129 / 148 ≈ 87%
+143 / 148 ≈ 97%
 ```
 
-Tỷ lệ này được xem là **chấp nhận được** trong web crawling.
+Đây là **tỷ lệ crawl rất cao** đối với web crawling.
 
 Các URL không crawl được thường do:
 
 * trang dynamic
 * redirect
-* trang không phải bài báo
-* trang bị chặn
+* timeout khi tải trang
+* nội dung không phải bài báo
 
 ---
 
-### Kiểm tra chất lượng HTML
+# Kiểm tra metadata
 
 ```
-Bad HTML: 0
-```
-
-Không có file HTML nào quá nhỏ hoặc lỗi.
-
----
-
-### Kiểm tra metadata
-
-```
-HTML files: 129
-Metadata files: 129
+HTML files: 143
+META files: 143
 ```
 
 Mỗi file HTML đều có metadata tương ứng.
 
 ---
 
-### Phân bố domain
+# Phân bố domain
 
-Các nguồn báo phổ biến:
+Các nguồn dữ liệu phổ biến trong dataset:
 
 ```
-baomoi.com
-trangtraiviet.danviet.vn
-vov.vn
-laodong.vn
-nld.com.vn
-vietnambiz.vn
-thoibaotaichinhvietnam.vn
-cafef.vn
+baomoi.com                 96
+trangtraiviet.danviet.vn   55
+vov.vn                     50
+laodong.vn                 45
+nld.com.vn                 28
+vietnambiz.vn              28
+thoibaotaichinhvietnam.vn  25
+giacaphe.com               10
+cafef.vn                   7
 ```
 
-Đây là các trang báo thường đăng tin về:
+Ngoài ra discovery còn chứa một số URL từ:
 
-* thị trường nông sản
-* giá cà phê
-* thông tin kinh tế
+```
+instagram.com
+```
+
+Tuy nhiên các URL này **không được crawl** vì không phải bài báo.
 
 ---
 
 # Nhận xét
 
-* Discovery dataset có **nhiều URL trùng lặp** do nhiều query khác nhau.
+* Discovery dataset chứa **nhiều URL trùng lặp** do nhiều query khác nhau.
 * Crawler đã loại bỏ trùng lặp và chỉ crawl mỗi URL một lần.
-* Phần lớn nguồn dữ liệu đến từ các trang báo Việt Nam về thị trường nông sản.
-* Một số trang dynamic hoặc không phải bài báo có thể không crawl được.
+* Phần lớn nguồn dữ liệu đến từ **các trang báo kinh tế và nông sản tại Việt Nam**.
+* Crawler xử lý được các trường hợp:
+
+  * Cloudflare
+  * trang yêu cầu JavaScript
+  * HTML rỗng
+
+Điều này giúp tăng đáng kể **tỷ lệ crawl thành công**.
 
 ---
 
@@ -255,9 +283,9 @@ Bước 2 đã thu thập thành công dataset raw HTML phục vụ cho bước 
 ```
 Discovery URLs:        430
 Unique article URLs:   148
-HTML crawled:          129
-Coverage:              ~87%
-HTML errors:           0
+HTML crawled:          143
+Missing pages:         5
+Coverage:              ~97%
 ```
 
-Dataset này sẽ được sử dụng trong bước tiếp theo của pipeline để **parse nội dung và trích xuất thông tin giá cà phê**.
+Dataset này sẽ được sử dụng trong bước tiếp theo của pipeline để **parse nội dung bài báo và trích xuất thông tin giá cà phê**.

@@ -5,8 +5,8 @@
   "query_id": "robusta_local",
   "rank": 10,
   "url_hash": "18eae804ec04bd33402b5a0b3d2223f3",
-  "crawl_time": "2026-03-15T14:19:26.865062",
+  "crawl_time": "2026-03-16T09:38:03.156251",
   "crawl_method": "requests",
   "status_code": 200,
-  "html_size": 104838
+  "html_size": 104958
 }

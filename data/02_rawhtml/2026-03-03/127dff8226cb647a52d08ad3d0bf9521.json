@@ -5,8 +5,8 @@
   "query_id": "arabica_explicit",
   "rank": 7,
   "url_hash": "127dff8226cb647a52d08ad3d0bf9521",
-  "crawl_time": "2026-03-15T14:20:11.883017",
+  "crawl_time": "2026-03-16T09:38:41.557289",
   "crawl_method": "requests",
   "status_code": 200,
-  "html_size": 108046
+  "html_size": 108079
 }
