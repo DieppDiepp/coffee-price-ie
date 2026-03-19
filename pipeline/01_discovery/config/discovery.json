@@ -2,8 +2,8 @@
   "_comment": "Config cho pipeline/01_discovery — đọc bởi pipeline/01_discovery/main.py",
 
   "date_range": {
-    "start": "2026-03-01",
-    "end":   "2026-03-11"
+    "start": "2023-03-11",
+    "end":   "2024-03-11"
   },
 
   "tavily": {
