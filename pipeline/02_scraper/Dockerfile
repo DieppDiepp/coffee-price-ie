@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Cài đặt trình duyệt chromium cho Playwright (được dùng bởi crawl4ai)
 RUN playwright install chromium
 RUN playwright install-deps chromium
-~
+
 COPY . .
 
 # Lệnh chạy mặc định
