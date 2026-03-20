@@ -14,7 +14,17 @@ from extractors import (
 )
 from snowflake_utils import get_snowflake_connection
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Support both running from /app (Docker) or nested in repo
+current_dir = Path(__file__).resolve()
+if current_dir.parent.name == "app":
+    # Inside docker, /app is the root
+    PROJECT_ROOT = current_dir.parent
+else:
+    # Local repo structure: pipeline/02_scraper/main.py
+    try:
+        PROJECT_ROOT = current_dir.parents[2]
+    except IndexError:
+        PROJECT_ROOT = current_dir.parent
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
