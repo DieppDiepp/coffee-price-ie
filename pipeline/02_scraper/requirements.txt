@@ -1,0 +1,6 @@
+scrapling
+crawl4ai
+beautifulsoup4
+python-dateutil
+lxml
+snowflake-connector-python==3.7.0

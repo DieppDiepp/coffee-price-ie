@@ -1,35 +1,24 @@
-from __future__ import annotations
-
 import argparse
 import asyncio
 from pathlib import Path
-
 from extractors import (
     Crawl4AIBrowserClient,
     HybridScraper,
     ScraplingHttpClient,
-    flatten_discovered_inputs,
     load_json_file,
-    load_resume_index,
     load_source_rules,
     lookup_source_rule,
     process_occurrences,
-    resolve_input_paths,
     resolve_repo_path,
+    Occurrence
 )
-
+from snowflake_utils import get_snowflake_connection
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Hybrid scraper for discovered article URLs.",
-    )
-    parser.add_argument(
-        "--input",
-        nargs="+",
-        help="One or more JSONL files or glob patterns. Defaults to config input_glob.",
+        description="Hybrid scraper pulling from Snowflake discovery_links.",
     )
     parser.add_argument(
         "--config",
@@ -40,43 +29,79 @@ def build_parser() -> argparse.ArgumentParser:
         "--limit",
         type=int,
         default=None,
-        help="Only process the first N occurrences after flattening and resume filtering.",
+        help="Only process the first N occurrences.",
     )
-    parser.add_argument(
-        "--resume",
-        dest="resume",
-        action="store_true",
-        help="Skip existing (url, date_ref) records already present in output.",
-    )
-    parser.add_argument(
-        "--no-resume",
-        dest="resume",
-        action="store_false",
-        help="Ignore existing output and process everything again.",
-    )
-    parser.set_defaults(resume=None)
     return parser
 
+def fetch_pending_occurrences(conn) -> list[Occurrence]:
+    cursor = conn.cursor()
+    cursor.execute("SELECT url_hash, url, domain, date_ref FROM discovery_links WHERE scrape_status = 'pending'")
+    rows = cursor.fetchall()
+    occurrences = []
+    for row in rows:
+        occurrences.append(Occurrence(
+            url_hash=row[0],
+            url=row[1],
+            domain=row[2],
+            date_ref=str(row[3]) if row[3] else ""
+        ))
+    return occurrences
+
+def get_save_callback(conn):
+    def save_callback(record):
+        cursor = conn.cursor()
+        url_hash = record["url_hash"]
+        status = record["status"]
+        
+        try:
+            # If success, insert into scraped_html
+            if status == "success" and record.get("raw_html"):
+                # We use MERGE or ignore if exists, but assuming it's pending, we just insert.
+                cursor.execute("""
+                    MERGE INTO scraped_html target
+                    USING (SELECT %s AS url_hash, %s AS html_content, %s AS scraped_at) source
+                    ON target.url_hash = source.url_hash
+                    WHEN MATCHED THEN UPDATE SET html_content = source.html_content, scraped_at = source.scraped_at
+                    WHEN NOT MATCHED THEN INSERT (url_hash, html_content, scraped_at) VALUES (source.url_hash, source.html_content, source.scraped_at)
+                """, (url_hash, record["raw_html"], record["collected_at"]))
+                final_status = 'success'
+            else:
+                final_status = 'failed'
+                
+            # Update discovery_links
+            cursor.execute(
+                "UPDATE discovery_links SET scrape_status = %s WHERE url_hash = %s",
+                (final_status, url_hash)
+            )
+            conn.commit()
+        except Exception as e:
+            print(f"Error saving record {url_hash} to Snowflake: {e}")
+            conn.rollback()
+
+    return save_callback
 
 async def run_async(args: argparse.Namespace) -> int:
-    config_path = resolve_repo_path(PROJECT_ROOT, args.config)
+    config_path = resolve_repo_path(PROJECT_ROOT, "pipeline/02_scraper/" + args.config)
+    if not config_path.exists():
+        # Fallback to repo root if not found in 02_scraper/config
+        config_path = resolve_repo_path(PROJECT_ROOT, args.config)
+        
     config = load_json_file(config_path)
 
-    input_patterns = args.input or [config["input_glob"]]
-    input_paths = resolve_input_paths(PROJECT_ROOT, input_patterns)
-    if not input_paths:
-        raise FileNotFoundError(f"No input files matched: {input_patterns}")
-
-    output_dir = resolve_repo_path(PROJECT_ROOT, config["output_dir"])
-    sources_path = resolve_repo_path(PROJECT_ROOT, config["sources_config"])
+    sources_path = resolve_repo_path(PROJECT_ROOT, "pipeline/02_scraper/" + config["sources_config"])
+    if not sources_path.exists():
+        sources_path = resolve_repo_path(PROJECT_ROOT, config["sources_config"])
+        
     default_rule, source_rules = load_source_rules(sources_path)
 
-    occurrences = flatten_discovered_inputs(input_paths)
+    print("Connecting to Snowflake...")
+    conn = get_snowflake_connection()
+    occurrences = fetch_pending_occurrences(conn)
+    
     if args.limit is not None:
         occurrences = occurrences[: args.limit]
 
-    resume_enabled = config.get("resume", True) if args.resume is None else args.resume
-    resume_index = load_resume_index(output_dir) if resume_enabled else set()
+    print(f"Found {len(occurrences)} pending links to scrape.")
 
     http_config = config["http"]
     browser_config = config["browser"]
@@ -109,36 +134,30 @@ async def run_async(args: argparse.Namespace) -> int:
         browser_enabled=browser_config.get("enabled", True),
     )
 
+    save_callback = get_save_callback(conn)
+
     try:
         stats = await process_occurrences(
             occurrences=occurrences,
-            output_dir=output_dir,
             scraper=scraper,
             source_lookup=lambda domain: lookup_source_rule(domain, default_rule, source_rules),
-            resume_index=resume_index,
+            save_callback=save_callback,
             worker_count=max(http_config["concurrency"], browser_config["concurrency"]),
         )
     finally:
         await scraper.close()
+        conn.close()
 
-    print_summary(input_paths, output_dir, len(occurrences), resume_enabled, stats)
+    print_summary(len(occurrences), stats)
     return 0
 
-
 def print_summary(
-    input_paths: list[Path],
-    output_dir: Path,
     occurrence_count: int,
-    resume_enabled: bool,
     stats: dict[str, int],
 ) -> None:
     print("Scraper summary")
-    print(f"- Inputs: {', '.join(str(path) for path in input_paths)}")
-    print(f"- Output dir: {output_dir}")
-    print(f"- Flattened occurrences: {occurrence_count}")
-    print(f"- Resume enabled: {resume_enabled}")
-    print(f"- Skipped via resume: {stats.get('skipped_resume', 0)}")
-    print(f"- Written: {stats.get('written', 0)}")
+    print(f"- Total pending links: {occurrence_count}")
+    print(f"- Processed: {stats.get('written', 0)}")
 
     for prefix, label in (
         ("status:", "Status"),
@@ -155,12 +174,10 @@ def print_summary(
         for name, value in entries[:15]:
             print(f"  - {name}: {value}")
 
-
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     return asyncio.run(run_async(args))
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

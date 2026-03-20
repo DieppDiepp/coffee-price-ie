@@ -64,6 +64,7 @@ class SourceRule:
 
 @dataclass(slots=True)
 class Occurrence:
+    url_hash: str
     url: str
     domain: str
     date_ref: str
@@ -506,6 +507,7 @@ def build_record(occurrence: Occurrence, payload: FetchPayload, source_rule: Sou
     title = extract_title(payload.raw_html)
     pub_result = extract_published_at(payload.raw_html, occurrence.date_ref, source_rule)
     return {
+        "url_hash": occurrence.url_hash,
         "url": occurrence.url,
         "domain": occurrence.domain,
         "date_ref": occurrence.date_ref,
@@ -531,22 +533,17 @@ def build_record(occurrence: Occurrence, payload: FetchPayload, source_rule: Sou
 
 async def process_occurrences(
     occurrences: Sequence[Occurrence],
-    output_dir: Path,
     scraper: HybridScraper,
     source_lookup: Callable[[str], SourceRule],
-    resume_index: set[tuple[str, str]] | None = None,
+    save_callback: Callable[[dict[str, Any]], None],
     worker_count: int = 5,
 ) -> Counter[str]:
     stats: Counter[str] = Counter()
-    resume_index = resume_index or set()
     queue: asyncio.Queue[Occurrence | None] = asyncio.Queue()
     result_queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
 
     scheduled = 0
     for occurrence in occurrences:
-        if (occurrence.url, occurrence.date_ref) in resume_index:
-            stats["skipped_resume"] += 1
-            continue
         queue.put_nowait(occurrence)
         scheduled += 1
 
@@ -576,7 +573,7 @@ async def process_occurrences(
         record = await result_queue.get()
         if record is None:
             continue
-        append_record(output_dir, record)
+        save_callback(record)
         stats["written"] += 1
         stats[f"status:{record['status']}"] += 1
         stats[f"method:{record['fetch_method']}"] += 1

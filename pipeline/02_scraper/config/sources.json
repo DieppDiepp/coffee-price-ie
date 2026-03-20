@@ -1,0 +1,156 @@
+{
+  "default": {
+    "source_id": "generic",
+    "prefer_browser": false,
+    "wait_for": null,
+    "published_at_hints": [
+      "article:published_time",
+      "og:published_time",
+      "publishdate",
+      "pubdate",
+      "date",
+      "datepublished",
+      "datecreated",
+      "dc.date.issued",
+      "parsely-pub-date"
+    ]
+  },
+  "sources": {
+    "baomoi.com": {
+      "source_id": "baomoi",
+      "prefer_browser": false,
+      "wait_for": null,
+      "skip_published_at_meta_keys": [
+        "article:published_time"
+      ],
+      "published_at_priority": [
+        "jsonld:datepublished",
+        "jsonld:datemodified"
+      ],
+      "published_at_hints": []
+    },
+    "cafef.vn": {
+      "source_id": "cafef",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "pubdate",
+        "publishdate",
+        "article:published_time"
+      ]
+    },
+    "chogia.vn": {
+      "source_id": "chogia",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "datepublished"
+      ]
+    },
+    "doanhnghiepkinhtexanh.vn": {
+      "source_id": "doanhnghiepkinhtexanh",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate"
+      ]
+    },
+    "doanhthuong.vn": {
+      "source_id": "doanhthuong",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate"
+      ]
+    },
+    "giacaphe.com": {
+      "source_id": "giacaphe",
+      "prefer_browser": true,
+      "wait_for": "css:main",
+      "published_at_hints": [
+        "article:published_time",
+        "datepublished",
+        "date"
+      ]
+    },
+    "kinhtedothi.vn": {
+      "source_id": "kinhtedothi",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate"
+      ]
+    },
+    "laodong.vn": {
+      "source_id": "laodong",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate",
+        "parsely-pub-date"
+      ]
+    },
+    "nld.com.vn": {
+      "source_id": "nld",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate"
+      ]
+    },
+    "phanbonvietnam.com.vn": {
+      "source_id": "phanbonvietnam",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate"
+      ]
+    },
+    "thoibaotaichinhvietnam.vn": {
+      "source_id": "tbtcvn",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate",
+        "date"
+      ]
+    },
+    "trangtraiviet.danviet.vn": {
+      "source_id": "danviet",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "parsely-pub-date",
+        "publishdate"
+      ]
+    },
+    "vietnambiz.vn": {
+      "source_id": "vietnambiz",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate",
+        "datepublished"
+      ]
+    },
+    "vnbusiness.vn": {
+      "source_id": "vnbusiness",
+      "prefer_browser": false,
+      "wait_for": null,
+      "published_at_hints": [
+        "article:published_time",
+        "publishdate"
+      ]
+    }
+  }
+}
