@@ -1,0 +1,90 @@
+{
+  "_comment": "Config cho pipeline/01_discovery — đọc bởi pipeline/01_discovery/main.py",
+
+  "date_range": {
+    "start": "2023-03-11",
+    "end":   "2026-03-11"
+  },
+
+  "tavily": {
+    "max_results":    10,
+    "search_depth":   "advanced",
+    "exclude_domains": [
+      "youtube.com",
+      "facebook.com",
+      "tiktok.com",
+      "zalo.me",
+      "shopee.vn",
+      "lazada.vn",
+      "tiki.vn"
+    ]
+  },
+
+  "serper": {
+    "max_results": 15,
+    "exclude_domains": [
+      "youtube.com",
+      "facebook.com",
+      "tiktok.com",
+      "zalo.me",
+      "shopee.vn",
+      "lazada.vn",
+      "tiki.vn"
+    ]
+  },
+
+"query_templates": [
+    {
+      "id": "robusta_general",
+      "target": "robusta",
+      "template": "giá cà phê ngày {day} tháng {month} năm {year}",
+      "priority": 1,
+      "_comment": "Query chủ lực cho Robusta (Kế thừa từ cụm 'giá cà phê hôm nay' với tần suất 97 lần)"
+    },
+    {
+      "id": "robusta_local",
+      "target": "robusta",
+      "template": "giá cà phê đắk lắk ngày {day} tháng {month} năm {year}",
+      "priority": 2,
+      "_comment": "Query vét dữ liệu địa phương (Dựa trên gợi ý Autocomplete hàng đầu cho Robusta)"
+    },
+    {
+      "id": "arabica_explicit",
+      "target": "arabica",
+      "template": "giá cà phê arabica ngày {day} tháng {month} năm {year}",
+      "priority": 1,
+      "_comment": "Query chủ lực cho Arabica (Tần suất xuất hiện 37 lần trên báo chí)"
+    },
+    {
+      "id": "arabica_local",
+      "target": "arabica",
+      "template": "giá cà phê lâm đồng ngày {day} tháng {month} năm {year}",
+      "priority": 2,
+      "_comment": "Query vét dữ liệu địa phương (Dựa trên gợi ý Autocomplete hàng đầu cho Arabica)"
+    }
+  ],
+
+  "output": {
+    "dir":              "data/01_discovered",
+    "filename_pattern": "{year}-{month:02d}.jsonl",
+    "_comment": "Gom theo tháng — data/01_discovered/2024-03.jsonl",
+    "format":           "jsonl",
+    "_comment_jsonl":   "Mỗi dòng = 1 ngày, append vào cuối file khi chạy"
+  },
+
+  "resume": {
+    "skip_if_date_exists": true,
+    "_comment": "Kiểm tra field 'date' trong từng dòng JSONL trước khi query"
+  },
+
+  "storage": {
+    "raw_html": "database",
+    "_comment": "HTML gốc lưu vào SQLite local, không lưu filesystem — tránh nặng git"
+  },
+
+  "rate_limit": {
+    "delay_between_calls_sec": 3,
+    "rotate_keys_every_n_calls": 900
+  }
+
+}

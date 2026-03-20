@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  discovery_service:
+    build:
+      context: ./pipeline/01_discovery  # Trỏ thư mục chứa Dockerfile
+      dockerfile: Dockerfile
+    container_name: coffee_discovery
+    env_file:
+      - .env  # Nạp toàn bộ API key và Snowflake config từ file .env ở máy chủ vào container
+    restart: "no" # Khi code chạy xong file main_serper.py thì container tự dừng (chạy batch job)
