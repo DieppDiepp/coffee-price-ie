@@ -7,15 +7,3 @@ services:
     env_file:
       - .env  # Nạp toàn bộ API key và Snowflake config từ file .env ở máy chủ vào container
     restart: "no" # Khi code chạy xong file main_serper.py thì container tự dừng (chạy batch job)
-
-  scraper_service:
-    build:
-      context: ./pipeline/02_scraper
-      dockerfile: Dockerfile
-    container_name: coffee_scraper
-    env_file:
-      - .env
-    # Chạy liên tục, nếu crash sẽ tự khởi động lại
-    restart: "unless-stopped"
-    # Truyền tham số để Scraper quét hết pending, sau đó nghỉ 1 tiếng (3600 giây) rồi tự động cào tiếp
-    command: ["python", "main.py", "--interval", "3600"]
