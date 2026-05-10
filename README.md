@@ -1,8 +1,8 @@
-# Dự án Lọc và Xử lý Dữ liệu Bài viết Cà phê
+# Lọc và Xử lý Dữ liệu Bài viết Cà phê
 
 Dự án này cung cấp một công cụ bằng Python (thông qua Jupyter Notebook) để tự động hóa việc trích xuất, hợp nhất và lọc dữ liệu bài viết từ các tập tin cục bộ. Mục tiêu chính là xác định và gom nhóm các bài viết liên quan đến chủ đề cà phê (như Robusta, Arabica, giá cả) từ một kho dữ liệu thô.
 
-## 📂 Cấu trúc thư mục (Project Structure)
+## Cấu trúc thư mục (Project Structure)
 
 Dự án bao gồm các tệp và thư mục chính sau:
 
@@ -13,7 +13,7 @@ Dự án bao gồm các tệp và thư mục chính sau:
 * **`requirements.txt`**: Danh sách các thư viện Python cần thiết để chạy dự án.
 * **`venv/`**: Thư mục môi trường ảo Python (Virtual Environment) của dự án.
 
-## ⚙️ Luồng xử lý dữ liệu (Workflow)
+## Luồng xử lý dữ liệu (Workflow)
 
 Chương trình thực hiện qua 3 bước chính:
 
@@ -21,7 +21,7 @@ Chương trình thực hiện qua 3 bước chính:
 2.  **Hợp nhất Dữ liệu (Merge Data):** So khớp cột `URL_HASH` từ file `coffee_price_source_websites.csv` với tên tệp bài viết. Loại bỏ các dữ liệu trùng lặp hoặc không cần thiết để giữ lại các bản ghi hợp lệ.
 3.  **Lọc Từ khóa & Xuất File (Filter & Export):** Sử dụng Regular Expressions (RegEx) để quét nội dung bài viết. Nếu nội dung chứa các từ khóa liên quan đến cà phê (`robusta`, `arabica`, `giá cà phê`), bài viết đó sẽ được giữ lại và lưu ra file `coffee_articles.csv`.
 
-## 🚀 Hướng dẫn cài đặt và sử dụng
+## Hướng dẫn cài đặt và sử dụng
 
 ### 1. Cài đặt môi trường
 
