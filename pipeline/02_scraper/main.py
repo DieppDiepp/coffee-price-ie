@@ -31,12 +31,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Only process the first N occurrences.",
     )
-    parser.add_argument(
-        "--interval",
-        type=int,
-        default=None,
-        help="Run continuously, sleeping for INTERVAL seconds between runs.",
-    )
     return parser
 
 def fetch_pending_occurrences(conn) -> list[Occurrence]:
@@ -100,84 +94,62 @@ async def run_async(args: argparse.Namespace) -> int:
         
     default_rule, source_rules = load_source_rules(sources_path)
 
+    print("Connecting to Snowflake...")
+    conn = get_snowflake_connection()
+    occurrences = fetch_pending_occurrences(conn)
+    
+    if args.limit is not None:
+        occurrences = occurrences[: args.limit]
+
+    print(f"Found {len(occurrences)} pending links to scrape.")
+
     http_config = config["http"]
     browser_config = config["browser"]
     timezone = config.get("timezone", "Asia/Ho_Chi_Minh")
 
-    while True:
-        print("Connecting to Snowflake...")
-        conn = get_snowflake_connection()
-        
-        try:
-            occurrences = fetch_pending_occurrences(conn)
-            
-            if args.limit is not None:
-                occurrences = occurrences[: args.limit]
+    http_client = ScraplingHttpClient(
+        timeout_sec=http_config["timeout_sec"],
+        retries=http_config["retries"],
+        concurrency=http_config["concurrency"],
+        delay_between_requests_sec=http_config["delay_between_requests_sec"],
+        timezone=timezone,
+    )
 
-            if not occurrences:
-                print("No pending links to scrape.")
-                if args.interval is not None:
-                    print(f"Sleeping for {args.interval} seconds...")
-                    conn.close()
-                    await asyncio.sleep(args.interval)
-                    continue
-                else:
-                    conn.close()
-                    return 0
+    browser_client = None
+    if browser_config.get("enabled", True):
+        browser_client = Crawl4AIBrowserClient(
+            timeout_sec=browser_config["timeout_sec"],
+            concurrency=browser_config["concurrency"],
+            wait_until=browser_config["wait_until"],
+            delay_before_return_html_sec=browser_config["delay_before_return_html_sec"],
+            wait_for_timeout_ms=browser_config["wait_for_timeout_ms"],
+            headless=browser_config.get("headless", True),
+            enable_stealth=browser_config.get("enable_stealth", True),
+            timezone=timezone,
+        )
 
-            print(f"Found {len(occurrences)} pending links to scrape.")
+    scraper = HybridScraper(
+        http_client=http_client,
+        browser_client=browser_client,
+        browser_enabled=browser_config.get("enabled", True),
+    )
 
-            http_client = ScraplingHttpClient(
-                timeout_sec=http_config["timeout_sec"],
-                retries=http_config["retries"],
-                concurrency=http_config["concurrency"],
-                delay_between_requests_sec=http_config["delay_between_requests_sec"],
-                timezone=timezone,
-            )
+    save_callback = get_save_callback(conn)
 
-            browser_client = None
-            if browser_config.get("enabled", True):
-                browser_client = Crawl4AIBrowserClient(
-                    timeout_sec=browser_config["timeout_sec"],
-                    concurrency=browser_config["concurrency"],
-                    wait_until=browser_config["wait_until"],
-                    delay_before_return_html_sec=browser_config["delay_before_return_html_sec"],
-                    wait_for_timeout_ms=browser_config["wait_for_timeout_ms"],
-                    headless=browser_config.get("headless", True),
-                    enable_stealth=browser_config.get("enable_stealth", True),
-                    timezone=timezone,
-                )
+    try:
+        stats = await process_occurrences(
+            occurrences=occurrences,
+            scraper=scraper,
+            source_lookup=lambda domain: lookup_source_rule(domain, default_rule, source_rules),
+            save_callback=save_callback,
+            worker_count=max(http_config["concurrency"], browser_config["concurrency"]),
+        )
+    finally:
+        await scraper.close()
+        conn.close()
 
-            scraper = HybridScraper(
-                http_client=http_client,
-                browser_client=browser_client,
-                browser_enabled=browser_config.get("enabled", True),
-            )
-
-            save_callback = get_save_callback(conn)
-
-            try:
-                stats = await process_occurrences(
-                    occurrences=occurrences,
-                    scraper=scraper,
-                    source_lookup=lambda domain: lookup_source_rule(domain, default_rule, source_rules),
-                    save_callback=save_callback,
-                    worker_count=max(http_config["concurrency"], browser_config["concurrency"]),
-                )
-            finally:
-                await scraper.close()
-                
-            print_summary(len(occurrences), stats)
-            
-        finally:
-            if not conn.is_closed():
-                conn.close()
-            
-        if args.interval is not None:
-            print(f"Finished batch. Sleeping for {args.interval} seconds before next run...")
-            await asyncio.sleep(args.interval)
-        else:
-            return 0
+    print_summary(len(occurrences), stats)
+    return 0
 
 def print_summary(
     occurrence_count: int,
