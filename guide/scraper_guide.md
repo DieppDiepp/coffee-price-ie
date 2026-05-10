@@ -1,114 +1,110 @@
-# Hướng dẫn Scraper - `pipeline/02_scraper`
+# Hướng dẫn Scraper — pipeline/02_scraper
 
-## Mục tiêu
+## Nhiệm vụ
 
-Đọc URL từ file discovered JSONL, tải HTML nguyên bản, và ghi ra `data/02_raw_articles/{year}-{month}.jsonl`.
+Nhận danh sách URL → tải HTML → lưu vào file JSONL theo tháng.
 
-Stage này chỉ làm nhiệm vụ thu thập raw article + metadata nhẹ. Không làm sạch HTML và không bóc main text.
-
-## Cách chạy
-
-```bash
-python -m pip install -r requirements.txt
-python -m playwright install chromium
-python pipeline/02_scraper/main.py --input ..\demo.jsonl --resume
-```
-
-Nếu muốn chạy theo pipeline mặc định:
-
-```bash
-python pipeline/02_scraper/main.py --resume
-```
+---
 
 ## Input
 
-Đầu vào là một hoặc nhiều file JSONL có cấu trúc:
+Đọc URL từ các file trong `data/01_discovered/*.jsonl`.
+
+Mỗi dòng trong file discovered có dạng:
 
 ```json
 {
-  "date": "2026-03-05",
-  "query": "giá cà phê ngày 5 tháng 3 năm 2026",
+  "date": "2024-03-05",
+  "query": "giá cà phê hôm nay 5/3/2024",
   "results": [
-    {
-      "rank": 1,
-      "url": "https://laodong.vn/...",
-      "domain": "laodong.vn",
-      "title": "..."
-    }
+    { "rank": 1, "url": "https://laodong.vn/...", "domain": "laodong.vn", "title": "..." },
+    { "rank": 2, "url": "https://giacaphe.com/...", "domain": "giacaphe.com", "title": "..." }
   ]
 }
 ```
 
-Scraper sẽ flatten từng `result` thành một occurrence độc lập, nhưng vẫn giữ `date_ref` gốc.
+Lấy `url` và `date` từ mỗi result — đây là 2 field quan trọng nhất.
+
+---
 
 ## Output
 
-Mỗi dòng trong `data/02_raw_articles/{year}-{month}.jsonl` là một object:
+Ghi vào `data/02_raw_articles/{year}-{month}.jsonl`.
 
-```json
-{
-  "url": "https://...",
-  "domain": "laodong.vn",
-  "date_ref": "2026-03-05",
-  "collected_at": "2026-03-11T21:00:00+07:00",
-  "title": "...",
-  "raw_html": "<html>...</html>",
-  "status": "success",
-  "error": null,
-  "final_url": "https://...",
-  "source_id": "laodong",
-  "published_at": "2026-03-05T06:30:00+07:00",
-  "published_at_raw": "2026-03-05T06:30:00",
-  "published_at_source": "jsonld",
-  "published_at_confidence": "high",
-  "published_at_alignment": "same_day",
-  "published_at_alignment_days": 0,
-  "http_status": 200,
-  "content_type": "text/html; charset=utf-8",
-  "fetch_method": "http",
-  "discovery_rank": 1
-}
-```
+Mỗi dòng là một JSON object — xem file mẫu `2026-03.jsonl`.
 
-## Quy tắc chính
+**Các field bắt buộc:**
 
-1. Mỗi cặp `(url, date_ref)` phải có đúng một record output.
-2. Nếu cùng URL xuất hiện ở nhiều ngày khác nhau, vẫn ghi nhiều record để giữ provenance.
-3. Resume chỉ skip theo `(url, date_ref)`, không skip theo URL đơn lẻ.
-4. `raw_html` phải là HTML nguyên bản lấy được từ site.
-5. Nếu HTTP bị block hoặc HTML bất thường, scraper sẽ fallback sang browser.
+| Field | Lấy từ đâu |
+|---|---|
+| `url` | Từ discovered record |
+| `domain` | Extract từ URL |
+| `date_ref` | Field `date` từ discovered record — **không tự parse từ URL** |
+| `collected_at` | Thời điểm scrape, format ISO 8601 timezone +07:00 |
+| `title` | Lấy từ thẻ `<title>` của HTML |
+| `raw_html` | Full HTML — không trim, không xử lý gì thêm |
+| `status` | Xem bảng bên dưới |
+| `error` | null nếu success, message lỗi nếu failed |
 
-## Mismatch Guard & Ambiguous Date Parsing
+**Các giá trị `status`:**
 
-- Hệ thống thu thập tự động đánh giá mức độ tương thích giữa ngày đăng bài thực tế (`published_at`) và ngày truy vấn mục tiêu (`date_ref`).
-- **Alignment Tags**:
-  - `same_day`: Lệch 0 ngày.
-  - `adjacent`: Lệch 1 ngày.
-  - `mismatch`: Lệch > 1 ngày (dùng để chặn bài cũ do bộ máy tìm kiếm nhầm lẫn).
-  - `unknown`: Không parse được ngày.
-- **Ambiguous Date Parsing**: Trình trích xuất `published_at` không "ép" ngày khớp `date_ref`. Chuỗi ngày mơ hồ (ví dụ: `03/01/2026`) được dịch nghiêm ngặt theo quy tắc ngôn ngữ (`prefer_dayfirst`) đã cấu hình ở `sources.json`. Qua đó giữ được tính nguyên bản cho bài báo tiếng Việt và tránh việc ẩn lấp các bài báo `mismatch`.
-- **JSON-LD**: Dữ liệu timestamp trong block `<script type="application/ld+json">` được ưu tiên cao nhất, rồi mới tới `<time>`, và thẻ `<meta>`.
+| Giá trị | Ý nghĩa |
+|---|---|
+| `success` | Lấy được HTML |
+| `failed_404` | Bài đã bị xóa |
+| `failed_blocked` | Site trả về 403 hoặc captcha |
+| `failed_timeout` | Request timeout |
+| `failed_other` | Lỗi khác |
 
-## Hybrid strategy
+---
 
-- HTTP-first bằng Scrapling cho đa số domain báo chí.
-- Browser fallback bằng Crawl4AI khi:
-  - HTTP trả `403`, `429`, `503`
-  - timeout
-  - body quá ngắn (`< 1024` bytes)
-  - có marker như `captcha`, `cloudflare`, `access denied`, `enable javascript`
-- `giacaphe.com` được cấu hình browser-first trong `config/sources.json`.
+## Quy tắc quan trọng
 
-## Kiểm tra nhanh
+**1. Mọi URL đều phải có record** — kể cả URL failed. Không được bỏ qua.
 
-```bash
-pytest -q
-python pipeline/02_scraper/main.py --input ..\demo.jsonl --limit 30 --resume
-```
+Lý do: cần biết URL nào đã xử lý rồi để không retry lại.
 
-Sau khi chạy, kiểm tra:
+**2. Không scrape URL trùng.**
+
+Trước khi scrape, kiểm tra URL đó đã có trong output file chưa. Nếu có thì bỏ qua.
+
+**3. Không chỉnh sửa raw_html.**
+
+Parser ở bước sau sẽ xử lý — scraper chỉ cần lấy đúng và đủ.
+
+**4. Append vào file, không overwrite.**
+
+File `2024-03.jsonl` có thể đang có data từ lần chạy trước — chỉ append thêm dòng mới.
+
+---
+
+## Gợi ý kỹ thuật
+
+- Tool: repo open source bạn đang dùng, hoặc `requests` + `BeautifulSoup` cho site đơn giản.
+- Delay giữa các request: 1-2 giây để tránh bị block.
+- Nếu site trả về 429 (rate limit): tăng delay lên 10 giây rồi retry 1 lần.
+- Chạy thử 20-30 URL trước khi chạy full để kiểm tra output đúng format chưa.
+
+---
+
+## Kiểm tra output
+
+Sau khi chạy xong một batch, kiểm tra nhanh:
 
 ```bash
-python -c "from pathlib import Path; print(Path('data/02_raw_articles/2026-03.jsonl').exists())"
-python -c "import json, pathlib; p=pathlib.Path('data/02_raw_articles/2026-03.jsonl'); print(sum(1 for _ in p.open(encoding='utf-8')))"
+# Đếm số dòng
+wc -l data/02_raw_articles/2024-03.jsonl
+
+# Xem 2 dòng đầu
+head -2 data/02_raw_articles/2024-03.jsonl | python -m json.tool
+
+# Đếm theo status
+cat data/02_raw_articles/2024-03.jsonl | python -c "
+import sys, json
+from collections import Counter
+c = Counter(json.loads(l)['status'] for l in sys.stdin)
+print(c)
+"
 ```
+
+Kết quả mong đợi: `success` chiếm > 70%, `failed_blocked` < 20%.

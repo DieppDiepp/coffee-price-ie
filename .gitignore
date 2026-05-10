@@ -1,4 +1,1 @@
-__pycache__/
-*.py[cod]
-data/02_raw_articles/*.jsonl
 .env
