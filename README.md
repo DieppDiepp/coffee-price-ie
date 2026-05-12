@@ -1,42 +1,96 @@
-# Lọc và Xử lý Dữ liệu Bài viết Cà phê
+# ☕ Coffee Price Analysis — CS313
 
-Dự án này cung cấp một công cụ bằng Python (thông qua Jupyter Notebook) để tự động hóa việc trích xuất, hợp nhất và lọc dữ liệu bài viết từ các tập tin cục bộ. Mục tiêu chính là xác định và gom nhóm các bài viết liên quan đến chủ đề cà phê (như Robusta, Arabica, giá cả) từ một kho dữ liệu thô.
+Dự án phân tích dữ liệu giá cà phê thế giới (Arabica & Robusta), bao gồm thu thập bài viết tin tức, tiền xử lý dữ liệu giá và phân tích khám phá dữ liệu (EDA) toàn diện.
 
-## Cấu trúc thư mục (Project Structure)
+---
 
-Dự án bao gồm các tệp và thư mục chính sau:
+##  Cấu trúc thư mục
 
-* **`03_articles/`**: Thư mục chứa các tệp văn bản/HTML thô. Mỗi tệp đại diện cho một bài viết (được tổ chức trong các thư mục con theo ngày xuất bản).
-* **`coffee_price_source_websites.csv`**: File dữ liệu đầu vào chứa danh sách các nguồn bài viết (bao gồm cột `URL_HASH` để đối chiếu).
-* **`coffee_articles.csv`**: File dữ liệu đầu ra chứa kết quả cuối cùng sau khi đã hợp nhất và lọc từ khóa.
-* **`test.ipynb`**: File Jupyter Notebook chứa mã nguồn chính thực thi toàn bộ quy trình.
-* **`requirements.txt`**: Danh sách các thư viện Python cần thiết để chạy dự án.
-* **`venv/`**: Thư mục môi trường ảo Python (Virtual Environment) của dự án.
+```
+CS313/
+├── data/
+│   ├── arabica.csv              # Dữ liệu giá Arabica thô (Cents/lb - ICE)
+│   └── robusta.csv              # Dữ liệu giá Robusta thô (USD/Tấn - LIFFE)
+├── eda/
+│   └── eda.ipynb                # Notebook EDA chính (biểu đồ tương tác)
+├── 03_articles/                 # Bài viết thô theo ngày xuất bản
+├── coffee_articles.csv          # Bài viết đã lọc từ khóa cà phê
+├── coffee_prices_extracted.csv  # Giá cà phê đã trích xuất
+├── coffee_price_source_websites.csv
+├── combine_eda.ipynb            # Notebook kết hợp phân tích
+├── merge.ipynb                  # Notebook hợp nhất dữ liệu
+├── requirements.txt
+└── venv/
+```
 
-## Luồng xử lý dữ liệu (Workflow)
+---
 
-Chương trình thực hiện qua 3 bước chính:
+##  EDA — Phân tích Dữ liệu Khám phá (`eda/eda.ipynb`)
 
-1.  **Quét và Đọc File (Load Articles):** Quét toàn bộ thư mục `03_articles`, đọc nội dung từng tệp và tổng hợp thành một DataFrame với các thông tin: Ngày xuất bản, Tên file, Nội dung và Đường dẫn.
-2.  **Hợp nhất Dữ liệu (Merge Data):** So khớp cột `URL_HASH` từ file `coffee_price_source_websites.csv` với tên tệp bài viết. Loại bỏ các dữ liệu trùng lặp hoặc không cần thiết để giữ lại các bản ghi hợp lệ.
-3.  **Lọc Từ khóa & Xuất File (Filter & Export):** Sử dụng Regular Expressions (RegEx) để quét nội dung bài viết. Nếu nội dung chứa các từ khóa liên quan đến cà phê (`robusta`, `arabica`, `giá cà phê`), bài viết đó sẽ được giữ lại và lưu ra file `coffee_articles.csv`.
+### Dữ liệu đầu vào
+| Loại | Nguồn | Đơn vị gốc | Phạm vi thời gian |
+|---|---|---|---|
+| **Arabica** | Sàn ICE New York | Cents/lb | 03/2023 – 2025 |
+| **Robusta** | Sàn LIFFE London | USD/Tấn | 03/2023 – 2025 |
 
-## Hướng dẫn cài đặt và sử dụng
+Toàn bộ giá được **chuẩn hóa về VND/kg** (tỷ giá cố định 1 USD = 25,400 VND) để so sánh trực tiếp.
 
-### 1. Cài đặt môi trường
+### Các biểu đồ phân tích
 
-Đảm bảo bạn đã cài đặt Python 3.x trên máy. Mở Terminal/Command Prompt trong thư mục dự án và thực hiện các lệnh sau:
+| # | Biểu đồ | Công cụ | Nội dung |
+|---|---|---|---|
+| 1 | **Nến Nhật & Khối lượng** | Plotly | OHLC + Volume, chuyển đổi Arabica ↔ Robusta bằng nút bấm |
+| 2 | **Xu hướng & SMA** | Plotly | So sánh giá 2 loại + Moving Average 7/14/30 ngày |
+| 3 | **Spread (Arbitrage)** | Plotly | Chênh lệch giá Arabica − Robusta theo thời gian |
+| 4 | **Biến động & Volume** | Plotly | Intraday Volatility + xác nhận xu hướng bằng Volume |
+| 5 | **Phân phối Rủi ro** | Seaborn | Histogram/KDE + Boxplot của `Change %` hàng ngày |
 
-**Kích hoạt môi trường ảo (nếu bạn chưa kích hoạt):**
-* Trên Windows:
-    ```bash
-    .\venv\Scripts\activate
-    ```
-* Trên macOS/Linux:
-    ```bash
-    source venv/bin/activate
-    ```
+### Những phát hiện chính
+- **Arabica** giao dịch cao hơn Robusta ~50,000–80,000 VND/kg (spread dương ổn định)
+- Cả hai loại đều có **xu hướng tăng dài hạn** từ 2023 đến 2025
+- **Arabica** đạt đỉnh ~230,000 VND/kg (Q3/2025); **Robusta** đỉnh ~140,000 VND/kg
+- **Robusta** có tail risk cao hơn (biến động lớn nhất: **−10.62%** ngày 02/12/2024)
+- Các đợt giá tăng/giảm mạnh đều đi kèm spike khối lượng giao dịch
 
-**Cài đặt thư viện:**
+---
+
+## Thu thập & Lọc Bài viết
+
+Pipeline xử lý bài viết tin tức liên quan đến thị trường cà phê:
+
+1. **Quét & Đọc** — Duyệt toàn bộ `03_articles/`, đọc nội dung từng file
+2. **Hợp nhất** — So khớp `URL_HASH` với `coffee_price_source_websites.csv`
+3. **Lọc từ khóa** — Giữ lại bài viết chứa `robusta`, `arabica`, `giá cà phê` (RegEx)
+4. **Xuất** — Lưu kết quả ra `coffee_articles.csv`
+
+---
+
+## Hướng dẫn cài đặt
+
 ```bash
+# 1. Kích hoạt môi trường ảo
+source venv/bin/activate        # macOS/Linux
+# .\venv\Scripts\activate       # Windows
+
+# 2. Cài đặt thư viện
 pip install -r requirements.txt
+
+# 3. Mở notebook EDA
+jupyter notebook eda/eda.ipynb
+```
+
+### Thư viện chính
+| Thư viện | Phiên bản | Mục đích |
+|---|---|---|
+| `pandas` | ≥2.0 | Xử lý dữ liệu bảng |
+| `plotly` | ≥5.0 | Biểu đồ tương tác |
+| `seaborn` | ≥0.12 | Biểu đồ thống kê |
+| `matplotlib` | ≥3.7 | Biểu đồ tĩnh |
+
+---
+
+##  Thông tin dự án
+
+- **Môn học**: CS313
+- **Python**: 3.14+
+- **Kernel**: `venv (3.14.4)`
