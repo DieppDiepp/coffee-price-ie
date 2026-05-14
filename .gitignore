@@ -1,3 +1,31 @@
+# secrets
 .env
+
+# data — large raw files not tracked
 data/03_articles/*
 !data/03_articles/.gitkeep
+data/01_discovered/*.jsonl
+data/01_discovered/*.csv
+
+# python cache
+__pycache__/
+.pytest_cache/
+
+# model artifact noise — keep only checkpoints/*.pkl
+dashboard/model_artifacts/**/*.log
+dashboard/model_artifacts/**/catboost_info/
+
+# tool cache / logs
+.superpowers/
+.playwright-mcp/
+logs/
+
+# generated images (dev screenshots)
+docs/screenshots/
+
+# frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
