@@ -1,0 +1,27 @@
+=======================================================
+
+Post-processing
+
+=======================================================
+
+  Total: 7,048
+
+  Status: {'ok': 7048}
+
+  is_coffee_price=True: 4,828 (68.5%)
+
+  Direction: {'UP': 2434, 'NONE': 2231, 'DOWN': 1581, 'STABLE': 475, 'MIXED': 327}
+
+  Valid prices: 4,719 (31,900 - 250,000)
+
+  Certainty: mean=2.60, dist={1: 2545, 2: 2251, 3: 6, 4: 1, 5: 2245}
+
+  Date mismatch (>2d): 360/4,717 (7.6%)
+
+
+
+  Exported: D:\Git\coffee-price-ie\data\04_features\llm_extracted.csv
+
+
+
+Done.
