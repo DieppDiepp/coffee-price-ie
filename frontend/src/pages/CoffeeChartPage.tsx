@@ -169,7 +169,7 @@ export default function CoffeeChartPage() {
             <YAxis tickFormatter={fmtK} tick={{ fill: '#64748b' }} />
             <Tooltip formatter={(v: any) => fmtVND(v)} />
             <Legend />
-            <Area type="monotone" dataKey="spread" name="Mức chênh lệch (VND/kg)" stroke="#8b5cf6" strokeWidth={2} fill="url(#spreadGrad)" connectNulls />
+            <Area type="monotone" dataKey="spread" name="Mức chênh lệch (VND/kg)" stroke="#8b5cf6" strokeWidth={2} fill="url(#spreadGrad)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
