@@ -8,24 +8,26 @@ import pandas as pd
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATA_ZIP = PROJECT_ROOT / "data" / "04_features" / "next_day_price_label.zip"
+DEFAULT_DATA_ZIP = PROJECT_ROOT / "data" / "04_features" / "v2_datasets.zip"
 DEFAULT_GT_DIR = PROJECT_ROOT / "data" / "06_ground_truth" / "Investing"
 
 COFFEE_TYPES = ("robusta", "arabica")
-FEATURE_VERSIONS = ("original", "generated", "selected")
+FEATURE_VERSIONS = ("v1", "v2", "v3_1", "v3_2", "v4_1", "v4_2", "v5")
 FEATURE_VERSION_LABELS = {
-    "original": "Đặc trưng gốc",
-    "generated": "Gốc + đặc trưng LLM từ tin tức",
-    "selected": "Gốc + đặc trưng được chọn",
+    "v1":  "V1 — Đặc trưng gốc",
+    "v2":  "V2 — Gốc + Đặc trưng được chọn",
+    "v3_1": "V3.1 — Gốc + Chọn lọc Traditional",
+    "v3_2": "V3.2 — Gốc + Chọn lọc LLM",
+    "v4_1": "V4.1 — Gốc + Được chọn + Toàn bộ Traditional",
+    "v4_2": "V4.2 — Gốc + Được chọn + Toàn bộ LLM",
+    "v5":  "V5 — Dự báo Biến động (Volatility)",
 }
 
 
 def expected_csv_name(coffee_type: str, feature_version: str) -> str:
     coffee_type = normalize_coffee_type(coffee_type)
     feature_version = normalize_feature_version(feature_version)
-    if feature_version == "original":
-        return f"{coffee_type}_original_features.csv"
-    return f"{coffee_type}_original_{feature_version}_features.csv"
+    return f"{coffee_type}_{feature_version}.csv"
 
 
 def normalize_coffee_type(coffee_type: str) -> str:
@@ -36,16 +38,7 @@ def normalize_coffee_type(coffee_type: str) -> str:
 
 
 def normalize_feature_version(feature_version: str) -> str:
-    value = feature_version.strip().lower()
-    alias = {
-        "original + generated": "generated",
-        "original_generated": "generated",
-        "original-generated": "generated",
-        "original + selected": "selected",
-        "original_selected": "selected",
-        "original-selected": "selected",
-    }
-    value = alias.get(value, value)
+    value = feature_version.strip().lower().replace("-", "_")
     if value not in FEATURE_VERSIONS:
         raise ValueError(f"Unsupported feature version: {feature_version!r}")
     return value
@@ -95,6 +88,10 @@ def load_feature_csv(
 def normalize_dataset_frame(df: pd.DataFrame) -> pd.DataFrame:
     if "target_price" in df.columns and "target_next_day" not in df.columns:
         df = df.rename(columns={"target_price": "target_next_day"})
+    if "volatility_price" in df.columns and "target_next_day" not in df.columns:
+        df = df.rename(columns={"volatility_price": "target_next_day"})
+
+    df = df.dropna(subset=["date"]).copy()
 
     required = {"date", "Gia_Viet_Nam", "target_next_day"}
     missing = required.difference(df.columns)

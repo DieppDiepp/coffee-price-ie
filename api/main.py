@@ -56,7 +56,9 @@ def _market_insight(news_data: list, gt: dict) -> str:
     ai_diff = abs(avg_llm - avg_dl)
     if ai_diff > 3000:
         parts.append(f"Các mô hình AI bất đồng lớn (lệch trung bình {ai_diff:,.0f} VNĐ).")
-    elif ai_diff <= 1000:
+    elif ai_diff > 1000:
+        parts.append(f"Hai mô hình AI có chênh lệch nhẹ (lệch trung bình {ai_diff:,.0f} VNĐ).")
+    else:
         parts.append("Hai mô hình AI bóc tách đồng thuận cao.")
 
     rob, ara = gt.get("robusta"), gt.get("arabica")
@@ -108,7 +110,7 @@ def get_metadata():
 @app.get("/api/prediction")
 def get_prediction(
     coffee_type: str = Query(..., pattern="^(robusta|arabica)$"),
-    feature_version: str = Query(..., pattern="^(original|generated|selected)$"),
+    feature_version: str = Query(..., pattern="^(v1|v2|v3_1|v3_2|v4_1|v4_2|v5)$"),
     date: str = Query(...),
     model_key: str | None = Query(None),
 ):
