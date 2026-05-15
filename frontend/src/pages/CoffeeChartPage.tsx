@@ -103,7 +103,7 @@ export default function CoffeeChartPage() {
           <ResponsiveContainer width="100%" height="90%">
             <LineChart data={filteredData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="date" hide={idx < 2} tick={{ fill: '#64748b', fontSize: 11 }} minTickGap={50} />
+              <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} minTickGap={50} />
               <YAxis domain={['auto', 'auto']} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={fmtK} />
               <Tooltip formatter={(v: any) => fmtVND(v)} />
               <Legend />
@@ -187,7 +187,7 @@ export default function CoffeeChartPage() {
           <ResponsiveContainer width="100%" height="90%">
             <ComposedChart data={filteredData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="date" hide={idx === 0} tick={{ fill: '#64748b', fontSize: 11 }} />
+              <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} minTickGap={40} />
               <YAxis yAxisId="left" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={fmtK} />
               <YAxis yAxisId="right" orientation="right" tick={{ fill: '#64748b', fontSize: 11 }} />
               <Tooltip formatter={(v: any) => Number(v).toLocaleString('vi-VN')} />
