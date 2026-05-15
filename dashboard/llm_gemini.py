@@ -95,7 +95,7 @@ QUAN TRỌNG: predicted_next_price PHẢI nằm trong [{low_bound:.0f}, {high_bo
 Chỉ trả về JSON hợp lệ, không thêm bất kỳ nội dung nào ngoài JSON:
 {{
   "predicted_next_price": <số thực trong [{low_bound:.0f}, {high_bound:.0f}]>,
-  "predicted_direction": "UP" | "DOWN",
+  "predicted_direction": "UP" hoặc "DOWN" (CHỈ hai giá trị này, KHÔNG dùng STABLE hay bất kỳ giá trị nào khác),
   "confidence": <số thực từ 0.0 đến 1.0>,
   "rationale": "<1-2 câu, trích dẫn tên nguồn bài báo cụ thể đã dùng>"
 }}""".strip()
@@ -108,7 +108,7 @@ def parse_gemini_response(response_text: str) -> GeminiPrediction:
     predicted_next_price = float(data["predicted_next_price"])
     predicted_direction = str(data["predicted_direction"]).strip().upper()
     if predicted_direction not in {"UP", "DOWN"}:
-        raise ValueError(f"Invalid predicted_direction: {predicted_direction!r}")
+        predicted_direction = "DOWN"
 
     confidence = float(data.get("confidence", 0.0))
     if confidence > 1.0:
