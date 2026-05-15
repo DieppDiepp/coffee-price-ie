@@ -56,7 +56,7 @@ export default function CoffeeChartPage() {
             aPrice: a.Price,
             aOpen: a.Open, aHigh: a.High, aLow: a.Low,
             aVol: parseVol(a['Vol.']),
-            spread: (a.Price || 0) - (r.Price || 0),
+            spread: (a.Price != null && r.Price != null) ? a.Price - r.Price : null,
           };
         }).filter(d => d.date).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -154,7 +154,7 @@ export default function CoffeeChartPage() {
 
   const renderSpread = () => (
     <div className="h-full w-full bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col">
-      <h3 className="text-slate-800 text-lg font-extrabold mb-4">Chênh lệch giá Arabica − Robusta (VND/kg)</h3>
+      <h3 className="text-slate-800 text-lg font-extrabold mb-4">Phân tích Chênh lệch (Spread: Arabica - Robusta)</h3>
       <div className="flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={filteredData}>
@@ -169,7 +169,7 @@ export default function CoffeeChartPage() {
             <YAxis tickFormatter={fmtK} tick={{ fill: '#64748b' }} />
             <Tooltip formatter={(v: any) => fmtVND(v)} />
             <Legend />
-            <Area type="monotone" dataKey="spread" name="Spread (VND/kg)" stroke="#8b5cf6" strokeWidth={2} fill="url(#spreadGrad)" />
+            <Area type="monotone" dataKey="spread" name="Mức chênh lệch (VND/kg)" stroke="#8b5cf6" strokeWidth={2} fill="url(#spreadGrad)" connectNulls />
           </AreaChart>
         </ResponsiveContainer>
       </div>
