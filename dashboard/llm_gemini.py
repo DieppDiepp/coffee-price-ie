@@ -43,45 +43,62 @@ def build_gemini_prompt_from_articles(
     current_price: float,
     prediction_date: str,
 ) -> str:
+    low_bound = round(current_price * 0.85 / 1000) * 1000
+    high_bound = round(current_price * 1.15 / 1000) * 1000
+
     if not articles:
         articles_text = "Không có bài báo nào trong khoảng thời gian này."
     else:
+        from collections import defaultdict
+        date_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for art in articles:
+            date_groups[str(art.get("date", ""))].append(art)
+
         parts: list[str] = []
-        for i, art in enumerate(articles, 1):
-            part = f"[Bài {i}] Ngày: {art.get('date', 'N/A')} | Nguồn: {art.get('domain', 'N/A')}"
-            snippet = (art.get("content_snippet") or "").strip()
-            if snippet:
-                part += f"\nNội dung: {snippet[:600]}"
-            price_dl = str(art.get("price_dl", "")).strip()
-            price_llm = str(art.get("price_llm", "")).strip()
-            if price_dl and price_dl not in ("", "0"):
-                part += f"\nGiá trích xuất DL: {price_dl} VNĐ/kg"
-            if price_llm and price_llm not in ("", "0"):
-                part += f"\nGiá trích xuất LLM: {price_llm} VNĐ/kg"
-            parts.append(part)
-        articles_text = "\n\n".join(parts)
+        for day_date in sorted(date_groups.keys(), reverse=True):
+            parts.append(f"=== Ngày {day_date} ===")
+            for i, art in enumerate(date_groups[day_date], 1):
+                snippet = (art.get("content_snippet") or "").strip()
+                if len(snippet) > 350:
+                    snippet = snippet[:350] + "..."
+                line = f"  [{i}] Nguồn: {art.get('domain', 'N/A')}"
+                if snippet:
+                    line += f"\n      Nội dung: {snippet}"
+                price_dl = str(art.get("price_dl", "")).strip()
+                price_llm = str(art.get("price_llm", "")).strip()
+                if price_dl and price_dl not in ("", "0"):
+                    line += f"\n      Giá DL: {price_dl} VNĐ/kg"
+                if price_llm and price_llm not in ("", "0"):
+                    line += f"\n      Giá LLM: {price_llm} VNĐ/kg"
+                parts.append(line)
+        articles_text = "\n".join(parts)
 
-    return f"""
-Bạn là chuyên gia dự báo giá cà phê Việt Nam.
+    return f"""Bạn là chuyên gia dự báo giá cà phê Việt Nam. CHỈ sử dụng thông tin từ các bài báo được cung cấp dưới đây, không dựa vào kiến thức nền tảng khác.
 
+--- THÔNG TIN ĐẦU VÀO ---
 Loại cà phê: {coffee_type}
-Ngày dự báo (ngày giao dịch tiếp theo): {prediction_date}
+Ngày dự báo: {prediction_date}
 Giá hiện tại: {current_price:,.0f} VNĐ/kg
+Khoảng giá hợp lệ (±15%): {low_bound:,.0f} – {high_bound:,.0f} VNĐ/kg
 
-Dưới đây là các bài báo tin tức cà phê trong những ngày gần đây:
-
+--- TIN TỨC GẦN ĐÂY (MỚI NHẤT TRƯỚC) ---
 {articles_text}
 
-Dựa vào nội dung các bài báo trên, hãy dự báo giá cà phê cho ngày giao dịch tiếp theo.
+--- YÊU CẦU SUY LUẬN ---
+Thực hiện theo 3 bước:
+Bước 1 – Nhận diện xu hướng: Tóm tắt tín hiệu giá từ các bài báo (tăng/giảm/đi ngang).
+Bước 2 – Đánh giá độ chắc chắn: Các bài báo có đồng thuận không? Biến động ra sao?
+Bước 3 – Đưa ra dự báo: Xác định giá trong khoảng {low_bound:,.0f}–{high_bound:,.0f} VNĐ/kg.
 
-Chỉ trả về JSON hợp lệ với schema sau, không giải thích thêm:
+QUAN TRỌNG: predicted_next_price PHẢI nằm trong [{low_bound:.0f}, {high_bound:.0f}]. Nếu tin tức không đủ, giữ nguyên giá hiện tại.
+
+Chỉ trả về JSON hợp lệ, không thêm bất kỳ nội dung nào ngoài JSON:
 {{
-  "predicted_next_price": <số thực, đơn vị VNĐ/kg>,
+  "predicted_next_price": <số thực trong [{low_bound:.0f}, {high_bound:.0f}]>,
   "predicted_direction": "UP" | "DOWN",
-  "confidence": <số thực từ 0 đến 1>,
-  "rationale": "<một câu ngắn giải thích lý do dựa trên tin tức>"
-}}
-""".strip()
+  "confidence": <số thực từ 0.0 đến 1.0>,
+  "rationale": "<1-2 câu, trích dẫn tên nguồn bài báo cụ thể đã dùng>"
+}}""".strip()
 
 
 def parse_gemini_response(response_text: str) -> GeminiPrediction:

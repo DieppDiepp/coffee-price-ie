@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -284,17 +285,51 @@ def prediction_response(
     )
 
 
-def load_articles_for_gemini(reference_date: str, window_days: int = 7) -> list[dict[str, Any]]:
+def _nonzero_price(value: Any) -> int:
+    try:
+        return int(re.sub(r"[^\d]", "", str(value))) or 0
+    except Exception:
+        return 0
+
+
+def _select_top_articles(day_articles: list[dict[str, Any]], max_per_day: int = 2) -> list[dict[str, Any]]:
+    with_price = [a for a in day_articles if _nonzero_price(a.get("price_dl")) > 0 or _nonzero_price(a.get("price_llm")) > 0]
+    without_price = [a for a in day_articles if a not in with_price]
+    selected: list[dict[str, Any]] = []
+    seen_domains: set[str] = set()
+    for pool in (with_price, without_price):
+        for article in pool:
+            if len(selected) >= max_per_day:
+                break
+            domain = str(article.get("domain", "")).strip()
+            if domain not in seen_domains:
+                selected.append(article)
+                seen_domains.add(domain)
+    if len(selected) < max_per_day:
+        for pool in (with_price, without_price):
+            for article in pool:
+                if len(selected) >= max_per_day:
+                    break
+                if article not in selected:
+                    selected.append(article)
+    return selected
+
+
+def load_articles_for_gemini(reference_date: str, window_days: int = 7, max_per_day: int = 2) -> list[dict[str, Any]]:
     if not _NEWS_DATA_PATH.exists():
         return []
     try:
         df = pd.read_csv(_NEWS_DATA_PATH).fillna("")
         df["_date"] = pd.to_datetime(df["date"], errors="coerce")
         end = pd.Timestamp(reference_date)
-        start = end - pd.Timedelta(days=window_days)
+        start = end - pd.Timedelta(days=window_days - 1)
         mask = (df["_date"] >= start) & (df["_date"] <= end)
-        subset = df[mask].drop(columns=["_date"]).sort_values("date")
-        return subset.to_dict(orient="records")[:20]
+        subset = df[mask].drop(columns=["_date"])
+        result: list[dict[str, Any]] = []
+        for day_date in sorted(subset["date"].unique(), reverse=True):
+            day_articles = subset[subset["date"] == day_date].to_dict(orient="records")
+            result.extend(_select_top_articles(day_articles, max_per_day=max_per_day))
+        return result
     except Exception:
         return []
 
@@ -311,7 +346,7 @@ def gemini_prediction_response(
         date,
     )
     reference_date_str = pd.Timestamp(source_row["date"]).strftime("%Y-%m-%d")
-    articles = load_articles_for_gemini(reference_date_str, window_days=0)
+    articles = load_articles_for_gemini(reference_date_str, window_days=7)
     current_price = float(source_row["current_price"])
     prompt = build_gemini_prompt_from_articles(
         coffee_type=COFFEE_LABELS[coffee_type],
