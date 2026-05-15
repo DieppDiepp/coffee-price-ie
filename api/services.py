@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -10,10 +11,11 @@ from dashboard.data_loader import (
     COFFEE_TYPES,
     FEATURE_VERSION_LABELS,
     FEATURE_VERSIONS,
-    history_rows_for_prompt,
     load_model_dataset,
 )
-from dashboard.llm_gemini import build_gemini_prompt, predict_with_gemini
+
+_NEWS_DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "html" / "final_enriched_dataset.csv"
+from dashboard.llm_gemini import build_gemini_prompt_from_articles, predict_with_gemini
 from dashboard.model_registry import load_checkpoint_model, normalize_key, registry_entries_for
 from dashboard.modeling import (
     DatasetSplitContext as ModelingDatasetSplit,
@@ -282,6 +284,21 @@ def prediction_response(
     )
 
 
+def load_articles_for_gemini(reference_date: str, window_days: int = 7) -> list[dict[str, Any]]:
+    if not _NEWS_DATA_PATH.exists():
+        return []
+    try:
+        df = pd.read_csv(_NEWS_DATA_PATH).fillna("")
+        df["_date"] = pd.to_datetime(df["date"], errors="coerce")
+        end = pd.Timestamp(reference_date)
+        start = end - pd.Timedelta(days=window_days)
+        mask = (df["_date"] >= start) & (df["_date"] <= end)
+        subset = df[mask].drop(columns=["_date"]).sort_values("date")
+        return subset.to_dict(orient="records")[:20]
+    except Exception:
+        return []
+
+
 def gemini_prediction_response(
     coffee_type: str,
     feature_version: str,
@@ -293,13 +310,14 @@ def gemini_prediction_response(
         feature_version,
         date,
     )
-    model = get_model(coffee_type, feature_version, model_key or "")
-    source_date = pd.Timestamp(source_row["date"])
-    history = history_rows_for_prompt(df, source_date, model.feature_columns)
-    prompt = build_gemini_prompt(
+    reference_date_str = pd.Timestamp(source_row["date"]).strftime("%Y-%m-%d")
+    articles = load_articles_for_gemini(reference_date_str, window_days=7)
+    current_price = float(source_row["current_price"])
+    prompt = build_gemini_prompt_from_articles(
         coffee_type=COFFEE_LABELS[coffee_type],
-        feature_version=FEATURE_VERSION_LABELS[feature_version],
-        history_rows=history,
+        articles=articles,
+        current_price=current_price,
+        prediction_date=date,
     )
     result = predict_with_gemini(prompt)
     if not result.available or result.prediction is None:
@@ -307,14 +325,14 @@ def gemini_prediction_response(
             available=False,
             error=result.error,
             prompt=prompt,
-            input_rows=history,
+            input_rows=articles,
             raw_output=None,
         )
 
     prediction = result.prediction
     evaluation = evaluate_prediction(
         predicted_price=prediction.predicted_next_price,
-        current_price=float(source_row["current_price"]),
+        current_price=current_price,
         actual_next_price=float(source_row["actual_next_price"]),
     )
     return GeminiPredictionResponse(
@@ -327,7 +345,7 @@ def gemini_prediction_response(
         error_pct=float(evaluation["error_pct"]),
         direction_correct=bool(evaluation["direction_correct"]),
         prompt=prompt,
-        input_rows=history,
+        input_rows=articles,
         raw_output=prediction.raw_response,
     )
 

@@ -37,31 +37,49 @@ class GeminiClientConfig:
     api_key: str | None = None
 
 
-def build_gemini_prompt(
+def build_gemini_prompt_from_articles(
     coffee_type: str,
-    feature_version: str,
-    history_rows: list[dict[str, Any]],
+    articles: list[dict[str, Any]],
+    current_price: float,
+    prediction_date: str,
 ) -> str:
-    history_json = json.dumps(history_rows, ensure_ascii=False, indent=2)
+    if not articles:
+        articles_text = "Không có bài báo nào trong khoảng thời gian này."
+    else:
+        parts: list[str] = []
+        for i, art in enumerate(articles, 1):
+            part = f"[Bài {i}] Ngày: {art.get('date', 'N/A')} | Nguồn: {art.get('domain', 'N/A')}"
+            snippet = (art.get("content_snippet") or "").strip()
+            if snippet:
+                part += f"\nNội dung: {snippet[:600]}"
+            price_dl = str(art.get("price_dl", "")).strip()
+            price_llm = str(art.get("price_llm", "")).strip()
+            if price_dl and price_dl not in ("", "0"):
+                part += f"\nGiá trích xuất DL: {price_dl} VNĐ/kg"
+            if price_llm and price_llm not in ("", "0"):
+                part += f"\nGiá trích xuất LLM: {price_llm} VNĐ/kg"
+            parts.append(part)
+        articles_text = "\n\n".join(parts)
+
     return f"""
-You are forecasting Vietnamese coffee prices for a demo dashboard.
+Bạn là chuyên gia dự báo giá cà phê Việt Nam.
 
-Coffee type: {coffee_type}
-Feature version: {feature_version}
+Loại cà phê: {coffee_type}
+Ngày dự báo (ngày giao dịch tiếp theo): {prediction_date}
+Giá hiện tại: {current_price:,.0f} VNĐ/kg
 
-Use only the historical rows below. Each row is known at the selected date or before.
-Predict the next trading day's Gia_Viet_Nam price and direction versus the latest
-Gia_Viet_Nam value in the history.
+Dưới đây là các bài báo tin tức cà phê trong những ngày gần đây:
 
-Historical rows:
-{history_json}
+{articles_text}
 
-Return only valid JSON with this exact schema:
+Dựa vào nội dung các bài báo trên, hãy dự báo giá cà phê cho ngày giao dịch tiếp theo.
+
+Chỉ trả về JSON hợp lệ với schema sau, không giải thích thêm:
 {{
-  "predicted_next_price": number,
+  "predicted_next_price": <số thực, đơn vị VNĐ/kg>,
   "predicted_direction": "UP" | "DOWN",
-  "confidence": number between 0 and 1,
-  "rationale": "one short sentence"
+  "confidence": <số thực từ 0 đến 1>,
+  "rationale": "<một câu ngắn giải thích lý do dựa trên tin tức>"
 }}
 """.strip()
 
