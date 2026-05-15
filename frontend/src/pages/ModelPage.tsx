@@ -71,7 +71,7 @@ function ModelPage() {
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [gemini, setGemini] = useState<GeminiResponse | null>(null);
   const [coffeeType, setCoffeeType] = useState("robusta");
-  const [featureVersion, setFeatureVersion] = useState("generated");
+  const [featureVersion, setFeatureVersion] = useState("v1");
   const [modelKey, setModelKey] = useState("");
   const [date, setDate] = useState("");
   const [loadState, setLoadState] = useState<LoadState>("loading");
@@ -86,7 +86,7 @@ function ModelPage() {
       .then((data) => {
         if (cancelled) return;
         setMetadata(data);
-        const defaultDates = data.available_dates.robusta?.selected ?? [];
+        const defaultDates = data.available_dates.robusta?.v1 ?? [];
         setDate(defaultDates[defaultDates.length - 1] ?? "");
         setLoadState("idle");
       })
