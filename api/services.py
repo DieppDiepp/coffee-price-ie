@@ -311,7 +311,7 @@ def gemini_prediction_response(
         date,
     )
     reference_date_str = pd.Timestamp(source_row["date"]).strftime("%Y-%m-%d")
-    articles = load_articles_for_gemini(reference_date_str, window_days=7)
+    articles = load_articles_for_gemini(reference_date_str, window_days=0)
     current_price = float(source_row["current_price"])
     prompt = build_gemini_prompt_from_articles(
         coffee_type=COFFEE_LABELS[coffee_type],

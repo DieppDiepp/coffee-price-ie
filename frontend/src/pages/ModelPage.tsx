@@ -139,35 +139,6 @@ function ModelPage() {
     [gemini, prediction]
   );
 
-  const rankedVersions = useMemo(() => {
-    const rows = prediction?.version_comparison ?? [];
-    if (!rows.length) return [];
-
-    const values = rows
-      .map((item) => item.test_rmse)
-      .filter((item): item is number => item !== null && item !== undefined);
-    const minRmse = values.length ? Math.min(...values) : 0;
-    const maxRmse = values.length ? Math.max(...values) : 1;
-
-    return rows
-      .slice()
-      .sort((a, b) => (a.test_rmse ?? Number.POSITIVE_INFINITY) - (b.test_rmse ?? Number.POSITIVE_INFINITY))
-      .map((item, index) => {
-        const rmse = item.test_rmse ?? maxRmse;
-        const spread = maxRmse - minRmse || 1;
-        const strength = 1 - (rmse - minRmse) / spread;
-        return {
-          ...item,
-          rank: index + 1,
-          strength
-        };
-      });
-  }, [prediction]);
-
-  const maxFeatureValue = useMemo(() => {
-    const values = prediction?.feature_snapshot.map((item) => Math.abs(item.value)) ?? [];
-    return values.length ? Math.max(...values) : 1;
-  }, [prediction]);
   const surroundingRows = prediction?.surrounding_rows ?? [];
 
   const selectedCoffeeLabel = metadata?.coffee_types.find((item) => item.value === coffeeType)?.label ?? "Robusta";
@@ -612,53 +583,6 @@ function ModelPage() {
         </Panel>
 
         <section className="intel-grid">
-          <Panel title="Bảng xếp hạng phiên bản đặc trưng" icon={<RotateCcw size={18} />} className="wide-panel">
-            {rankedVersions.length ? (
-              <div className="version-grid">
-                {rankedVersions.map((item) => (
-                  <article className="version-card" key={item.version}>
-                    <div className="version-card__head">
-                      <span className="version-rank">#{item.rank}</span>
-                      <StatusPill label={item.source === "checkpoint" ? "Checkpoint" : "Fallback"} tone={item.rank === 1 ? "good" : "neutral"} />
-                    </div>
-                    <strong>{item.label}</strong>
-                    <p>{item.model_name}</p>
-                    <div className="version-meter">
-                      <span style={{ width: `${38 + item.strength * 62}%` }} />
-                    </div>
-                    <dl>
-                      <div><dt>Test RMSE</dt><dd>{formatPrice(item.test_rmse)}</dd></div>
-                      <div><dt>Test MAE</dt><dd>{formatPrice(item.test_mae)}</dd></div>
-                    </dl>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <EmptyPanelState text="Chạy ML trước để mở bảng xếp hạng ba version đặc trưng." />
-            )}
-          </Panel>
-
-          <Panel
-            title="Hồ sơ mô hình"
-            icon={<Database size={18} />}
-          >
-            {prediction || activeSplit ? (
-              <dl className="model-list">
-                <div><dt>Model đã chọn</dt><dd>{prediction?.selection.model_label ?? selectedModelLabel}</dd></div>
-                <div><dt>Tên model</dt><dd>{prediction?.model.name ?? selectedModelOption?.model_name ?? "-"}</dd></div>
-                <div><dt>Nguồn</dt><dd>{sourceLabel(prediction?.model.source ?? selectedModelOption?.source ?? "fallback")}</dd></div>
-                <div><dt>Khuyến nghị</dt><dd>{(prediction?.model.is_recommended ?? selectedModelOption?.is_recommended) ? "Có" : "Không"}</dd></div>
-                <div><dt>Số đặc trưng</dt><dd>{prediction ? String(prediction.model.feature_count) : "-"}</dd></div>
-                <div><dt>Phạm vi train</dt><dd>{activeSplit ? `${activeSplit.train.start_date} -> ${activeSplit.train.end_date}` : "-"}</dd></div>
-                <div><dt>Tập validation</dt><dd>{activeSplit ? `${activeSplit.validation.start_date} -> ${activeSplit.validation.end_date}` : "-"}</dd></div>
-                <div><dt>Tập test</dt><dd>{activeSplit ? `${activeSplit.test.start_date} -> ${activeSplit.test.end_date}` : "-"}</dd></div>
-                <div><dt>Test RMSE</dt><dd>{formatPrice(selectedModelMetrics.test_rmse)}</dd></div>
-              </dl>
-            ) : (
-              <EmptyPanelState text="Thông số model sẽ mở ra ngay sau khi bấm dự đoán." />
-            )}
-          </Panel>
-
           <Panel
             title="Đánh giá nhanh"
             icon={prediction?.ml_prediction.direction_correct ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
@@ -719,7 +643,7 @@ function ModelPage() {
                     value={
                       gemini
                         ? JSON.stringify(gemini.input_rows, null, 2)
-                        : "Chưa có input Gemini. Hãy chạy ML và gọi Gemini để xem 7 dòng lịch sử được gửi đi."
+                        : "Chưa có input Gemini. Hãy chạy ML và gọi Gemini để xem các bài báo được gửi đi."
                     }
                   />
                 </div>
@@ -764,33 +688,6 @@ function ModelPage() {
             </div>
           </Panel>
 
-          <Panel title="Đầu vào mô hình tại ngày trước đó" icon={<CalendarDays size={18} />}>
-            {prediction?.feature_snapshot.length ? (
-              <div className="feature-list">
-                <div className="feature-note">
-                  <StatusPill label="Input values" tone="neutral" />
-                  <p>
-                    Đây là các giá trị đầu vào model nhận tại ngày trước đó, được dùng để dự đoán cho ngày đang chọn
-                    và được sắp xếp theo độ lớn tuyệt đối. Danh sách này không phải mức ảnh hưởng nhân quả hay
-                    feature importance tuyệt đối.
-                  </p>
-                </div>
-                {prediction.feature_snapshot.map((item) => (
-                  <div className="feature-row" key={item.name}>
-                    <div>
-                      <span>{item.name}</span>
-                      <strong>{formatNumber(item.value)}</strong>
-                    </div>
-                    <div className="feature-bar">
-                      <span style={{ width: `${Math.max((Math.abs(item.value) / maxFeatureValue) * 100, 10)}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyPanelState text="Danh sách đầu vào nổi bật sẽ xuất hiện sau lần dự đoán đầu tiên." />
-            )}
-          </Panel>
         </section>
       </main>
     </div>

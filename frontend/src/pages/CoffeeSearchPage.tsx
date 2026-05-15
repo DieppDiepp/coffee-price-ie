@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   AlertCircle, BarChart2, Calendar, ExternalLink,
-  Loader2, MapPin, Search, Sparkles,
+  Loader2, MapPin, Search,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -20,7 +20,6 @@ export default function CoffeeSearchPage() {
   const navigate = useNavigate();
   const [queryDate, setQueryDate] = useState('');
   const [results, setResults] = useState<CoffeeNews[]>([]);
-  const [marketInsight, setMarketInsight] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
@@ -31,7 +30,6 @@ export default function CoffeeSearchPage() {
     setLoading(true);
     setError('');
     setHasSearched(true);
-    setMarketInsight('');
 
     try {
       const res = await fetch(`/api/v1/coffee-prices?query_date=${queryDate}`);
@@ -41,7 +39,6 @@ export default function CoffeeSearchPage() {
         throw new Error('Lỗi kết nối máy chủ Backend.');
       }
       const body = await res.json();
-      setMarketInsight(body.market_insight);
       const articles: CoffeeNews[] = body.data;
       setResults(articles.filter((v, i, a) => a.findIndex(t => t.url === v.url && t.price_llm === v.price_llm) === i));
     } catch (err: any) {
@@ -93,16 +90,6 @@ export default function CoffeeSearchPage() {
                 <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
                 <h3 className="text-red-800 font-bold text-xl mb-1">Không tìm thấy dữ liệu</h3>
                 <p className="text-red-600/80 max-w-lg">{error}</p>
-              </div>
-            )}
-
-            {!error && marketInsight && (
-              <div className="bg-indigo-600 text-white p-8 rounded-[2rem] shadow-xl relative overflow-hidden group">
-                <Sparkles className="absolute right-6 top-6 w-12 h-12 text-white/20 group-hover:scale-125 transition-transform" />
-                <div className="relative z-10">
-                  <h3 className="text-indigo-200 font-bold uppercase tracking-widest text-xs mb-3">Nhận định thị trường:</h3>
-                  <p className="text-xl font-medium leading-relaxed italic">"{marketInsight}"</p>
-                </div>
               </div>
             )}
 
