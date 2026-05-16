@@ -1,3 +1,18 @@
 .env
 data/03_articles/*
 !data/03_articles/.gitkeep
+
+# LaTeX
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+overleaf_upload.zip
+zixBmrzZ
+report.tex
+report_figures/
